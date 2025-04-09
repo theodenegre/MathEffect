@@ -81,7 +81,7 @@ class Node:
 
     def next_player(self):
         # Add an extra turn for "Bot" after "Chance"
-        order = ["Bot", "Chance", "Manuel", "Chance", "Bot", "Chance"]
+        order = ["Bot", "Chance", "Manuel", "Chance", "Bot"]
         if self.depth + 1 >= len(order) * self.max_turns:
             return None  # Feuille
         return order[(self.depth + 1) % len(order)]
@@ -109,7 +109,7 @@ class Node:
         # Cas de base: feuille
         if self.is_leaf():
             return None, self.gain
-        
+
         # Calcul des gains pour chaque action possible
         action_gains = {}
         for i, child in enumerate(self.children):
@@ -118,7 +118,7 @@ class Node:
                 action = actions[i]
                 _, child_gains = child.compute_subgame_perfect_equilibrium()
                 action_gains[action] = child_gains
-        
+
         # Nœud chance: calculer la moyenne des gains (50% chaque branche)
         if self.player == "Chance":
             if len(action_gains) == 2:  # Assurez-vous qu'il y a bien deux branches
@@ -130,21 +130,21 @@ class Node:
                     (gains1[1] + gains2[1]) / 2   # Moyenne des gains pour Manuel
                 )
                 return None, average_gains
-        
+
         # Nœud joueur: choisir l'action qui maximise le gain du joueur actuel
         elif self.player in ["Bot", "Manuel"]:
             player_index = 0 if self.player == "Bot" else 1
             best_action = None
             best_gain = float('-inf')
-            
+
             for action, gains in action_gains.items():
                 if gains[player_index] > best_gain:
                     best_gain = gains[player_index]
                     best_action = action
                     best_gains = gains
-            
+
             return best_action, best_gains
-        
+
         # Par défaut
         return None, self.gain
 
@@ -211,11 +211,29 @@ def draw_tree(canvas, node, x, y, x_offset, y_offset):
 
 
 # Création de la racine avec un paramètre pour le nombre de tours
-max_turns = 1
+max_turns = 4
 root = Node("Bot", [], max_turns=max_turns)
 root.build_children()
 
-root.display()
+# root.display()
+
+_, equilibrium_gains_mean = root.compute_subgame_perfect_equilibrium()
+print(f"\n Gains d'équilibre: {equilibrium_gains_mean} pour l'historique complet:")
+somme = (0, 0)
+nbr = 0
+win = 0
+for path in root.get_complete_equilibrium_history():
+    print(path)
+    somme = (somme[0] + path[-1][2][0], somme[1] + path[-1][2][1])
+    nbr += 1
+    if path[-1][2][0] > path[-1][2][1]:
+        win += 1
+    elif path[-1][2][0] == path[-1][2][1]:
+        win += 0.5
+print(f"\nMoyenne des gains: {equilibrium_gains_mean}")
+print(f"Win ratio : ({(win / nbr) * 100:.2f}%)")
+
+
 # Interface graphique
 window = tk.Tk()
 window.title("Arbre de Modélisation")
@@ -228,7 +246,3 @@ draw_tree(canvas, root, 600, 50, 600, 80/max_turns)
 # Lancer l'interface graphique
 window.mainloop()
 
-_, equilibrium_gains = root.compute_subgame_perfect_equilibrium()
-print(f"\n Gains d'équilibre: {equilibrium_gains} pour l'historique complet:")
-for path in root.get_complete_equilibrium_history():
-    print(path)
