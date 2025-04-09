@@ -73,10 +73,10 @@ class Node:
     def calculate_sell_gain(self, player, current_price):
         if player == "Bot" and self.state_bot == "A":
             buy_price = next((price for p, a, price in reversed(self.history) if p == "Bot" and a == "A"), self.price)
-            return current_price - buy_price
+            return current_price - buy_price + 1
         elif player == "Manuel" and self.state_manuel == "A":
             buy_price = next((price for p, a, price in reversed(self.history) if p == "Manuel" and a == "A"), self.price)
-            return current_price - buy_price
+            return current_price - buy_price + 1
         return 0
 
     def next_player(self):
@@ -191,7 +191,7 @@ def draw_tree(canvas, node, x, y, x_offset, y_offset):
     # Dessiner le nœud
     gain_bot, gain_manuel = node.gain
     player = node.player if node.player != "None" else ""
-    node_text = f"{player}\n({gain_bot}, {gain_manuel})\n{node.price}".strip() if node.player else f"({gain_bot}, {gain_manuel})".strip()
+    node_text = f"{player}\n ({gain_bot}, {gain_manuel})\n   {node.price}" if node.player else f"({gain_bot}, {gain_manuel})".strip()
     canvas.create_oval(x - 20, y - 20, x + 20, y + 20, fill="lightblue")
     canvas.create_text(x, y, text=node_text, font=("Arial", 10))
 
@@ -219,9 +219,7 @@ root.build_children()
 
 if max_turns != 4:
     root.display()
-
-_, equilibrium_gains_mean = root.compute_subgame_perfect_equilibrium()
-print(f"\n Gains d'équilibre: {equilibrium_gains_mean} pour l'historique complet:")
+    print()
 somme = (0, 0)
 nbr = 0
 win = 0
@@ -233,8 +231,8 @@ for path in root.get_complete_equilibrium_history():
         win += 1
     elif path[-1][2][0] == path[-1][2][1]:
         win += 0.5
-print(f"\nMoyenne des gains: {equilibrium_gains_mean}")
-print(f"Win ratio : ({(win / nbr) * 100:.2f}%)")
+print(f"\nMoyenne des gains: {(somme[0] / nbr, somme[1] / nbr)}")
+print(f"Win ratio des équilibres : ({(win / nbr) * 100:.2f}%)")
 
 
 # Interface graphique
