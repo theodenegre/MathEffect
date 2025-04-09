@@ -211,11 +211,14 @@ def draw_tree(canvas, node, x, y, x_offset, y_offset):
 
 
 # Création de la racine avec un paramètre pour le nombre de tours
-max_turns = 4
+max_turns = int(input("Entrez le nombre de tours (maximum 4): "))
+if max_turns > 4:
+    raise ValueError("Le nombre de tours ne peut pas dépasser 4.")
 root = Node("Bot", [], max_turns=max_turns)
 root.build_children()
 
-# root.display()
+if max_turns != 4:
+    root.display()
 
 _, equilibrium_gains_mean = root.compute_subgame_perfect_equilibrium()
 print(f"\n Gains d'équilibre: {equilibrium_gains_mean} pour l'historique complet:")
