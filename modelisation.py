@@ -34,7 +34,7 @@ class Node:
             return ["A", "R"]  # Can do nothing or buy again
 
     def build_children(self):
-        if self.depth >= self.max_turns * len(self.next_player().__doc__):  # Each turn has steps based on the player order
+        if self.depth >= self.max_turns * 7:  # Each turn has steps based on the player order
             return  # End of tree
         next_player = self.next_player()
         for action in self.possible_actions():
@@ -81,7 +81,7 @@ class Node:
 
     def next_player(self):
         # Add an extra turn for "Bot" after "Chance"
-        order = ["Bot", "Chance", "Manuel", "Chance"]
+        order = ["Bot", "Chance", "Manuel", "Chance", "Bot", "Chance"]
         if self.depth + 1 >= len(order) * self.max_turns:
             return None  # Feuille
         return order[(self.depth + 1) % len(order)]
@@ -100,6 +100,88 @@ class Node:
             print(f"Historique: {self.history}, Gain: {self.gain}")
         for child in self.children:
             child.display(indent + 1)
+
+    def compute_subgame_perfect_equilibrium(self):
+        """
+        Calcule les équilibres parfaits en sous-jeux en commençant par les feuilles.
+        Retourne un tuple (optimal_action, gains) où gains est (gain_bot, gain_manuel)
+        """
+        # Cas de base: feuille
+        if self.is_leaf():
+            return None, self.gain
+        
+        # Calcul des gains pour chaque action possible
+        action_gains = {}
+        for i, child in enumerate(self.children):
+            actions = self.possible_actions()
+            if i < len(actions):  # Vérification de sécurité
+                action = actions[i]
+                _, child_gains = child.compute_subgame_perfect_equilibrium()
+                action_gains[action] = child_gains
+        
+        # Nœud chance: calculer la moyenne des gains (50% chaque branche)
+        if self.player == "Chance":
+            if len(action_gains) == 2:  # Assurez-vous qu'il y a bien deux branches
+                actions = list(action_gains.keys())
+                gains1 = action_gains[actions[0]]
+                gains2 = action_gains[actions[1]]
+                average_gains = (
+                    (gains1[0] + gains2[0]) / 2,  # Moyenne des gains pour Bot
+                    (gains1[1] + gains2[1]) / 2   # Moyenne des gains pour Manuel
+                )
+                return None, average_gains
+        
+        # Nœud joueur: choisir l'action qui maximise le gain du joueur actuel
+        elif self.player in ["Bot", "Manuel"]:
+            player_index = 0 if self.player == "Bot" else 1
+            best_action = None
+            best_gain = float('-inf')
+            
+            for action, gains in action_gains.items():
+                if gains[player_index] > best_gain:
+                    best_gain = gains[player_index]
+                    best_action = action
+                    best_gains = gains
+            
+            return best_action, best_gains
+        
+        # Par défaut
+        return None, self.gain
+
+    def get_complete_equilibrium_history(self):
+        """
+        Retourne l'historique complet des actions optimales selon l'équilibre parfait en sous-jeux.
+        """
+        optimal_paths = []
+        self._get_complete_equilibrium_paths([], optimal_paths)
+        return optimal_paths
+        
+    def _get_complete_equilibrium_paths(self, current_path, all_paths):
+        """
+        Méthode auxiliaire récursive pour construire tous les chemins optimaux.
+        """
+        if self.is_leaf():
+            all_paths.append(current_path + [("Leaf", None, self.gain)])
+            return
+            
+        # Calculer l'action optimale pour ce nœud
+        best_action, _ = self.compute_subgame_perfect_equilibrium()
+        
+        # Si c'est un nœud chance, les deux branches font partie de l'équilibre
+        if self.player == "Chance":
+            for i, child in enumerate(self.children):
+                actions = self.possible_actions()
+                if i < len(actions):
+                    action = actions[i]
+                    new_path = current_path + [(self.player, action, self.price)]
+                    child._get_complete_equilibrium_paths(new_path, all_paths)
+        else:
+            # Pour les nœuds joueurs, on ne suit que l'action optimale
+            for i, child in enumerate(self.children):
+                actions = self.possible_actions()
+                if i < len(actions) and actions[i] == best_action:
+                    new_path = current_path + [(self.player, best_action, self.price)]
+                    child._get_complete_equilibrium_paths(new_path, all_paths)
 
 # Fonction pour dessiner l'arbre dans une interface graphique
 def draw_tree(canvas, node, x, y, x_offset, y_offset):
@@ -129,11 +211,11 @@ def draw_tree(canvas, node, x, y, x_offset, y_offset):
 
 
 # Création de la racine avec un paramètre pour le nombre de tours
-max_turns = 4
+max_turns = 1
 root = Node("Bot", [], max_turns=max_turns)
 root.build_children()
-root.display()
 
+root.display()
 # Interface graphique
 window = tk.Tk()
 window.title("Arbre de Modélisation")
@@ -141,7 +223,12 @@ canvas = Canvas(window, width=1200, height=800, bg="white")
 canvas.pack()
 
 # Dessiner l'arbre
-draw_tree(canvas, root, 600, 50, 600, 125/max_turns)
+draw_tree(canvas, root, 600, 50, 600, 80/max_turns)
 
 # Lancer l'interface graphique
 window.mainloop()
+
+_, equilibrium_gains = root.compute_subgame_perfect_equilibrium()
+print(f"\n Gains d'équilibre: {equilibrium_gains} pour l'historique complet:")
+for path in root.get_complete_equilibrium_history():
+    print(path)
