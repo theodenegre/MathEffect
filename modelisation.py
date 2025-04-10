@@ -81,7 +81,7 @@ class Node:
 
     def next_player(self):
         # Add an extra turn for "Bot" after "Chance"
-        order = ["Bot", "Chance", "Bot", "Chance", "Manuel"]
+        order = ["Bot", "Chance", "Bot", "Chance", "Manuel", "Chance"]
         if self.depth + 1 >= len(order) * self.max_turns:
             return None  # Feuille
         return order[(self.depth + 1) % len(order)]
