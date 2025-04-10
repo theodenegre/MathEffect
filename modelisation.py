@@ -73,15 +73,15 @@ class Node:
     def calculate_sell_gain(self, player, current_price):
         if player == "Bot" and self.state_bot == "A":
             buy_price = next((price for p, a, price in reversed(self.history) if p == "Bot" and a == "A"), self.price)
-            return current_price - buy_price + 1
+            return current_price - buy_price
         elif player == "Manuel" and self.state_manuel == "A":
             buy_price = next((price for p, a, price in reversed(self.history) if p == "Manuel" and a == "A"), self.price)
-            return current_price - buy_price + 1
+            return current_price - buy_price
         return 0
 
     def next_player(self):
         # Add an extra turn for "Bot" after "Chance"
-        order = ["Bot", "Chance", "Manuel", "Chance", "Bot"]
+        order = ["Bot", "Chance", "Bot", "Chance", "Manuel"]
         if self.depth + 1 >= len(order) * self.max_turns:
             return None  # Feuille
         return order[(self.depth + 1) % len(order)]
